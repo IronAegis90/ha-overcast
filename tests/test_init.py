@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.overcast import async_remove_config_entry_device
 from custom_components.overcast.const import DOMAIN
 from homeassistant.components.notify import (
     ATTR_MESSAGE,
@@ -16,7 +17,6 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.setup import async_setup_component
 
 from .conftest import DEVICE_ID, Connect
 
@@ -130,7 +130,6 @@ async def test_image_entity_signed_url(
     hass: HomeAssistant, entry: MockConfigEntry, connect_tv: Connect
 ) -> None:
     """A camera becomes a signed https URL on the external URL."""
-    await async_setup_component(hass, "http", {})
     client, _ = await connect_tv()
 
     with pytest.raises(ServiceValidationError):
@@ -214,24 +213,20 @@ async def test_entities_restored_after_restart(
 
 
 async def test_remove_device(
-    hass: HomeAssistant, entry: MockConfigEntry, connect_tv: Connect, hass_ws_client
+    hass: HomeAssistant, entry: MockConfigEntry, connect_tv: Connect
 ) -> None:
-    """Removing a TV deletes its entities."""
+    """Removing a TV deletes its entities and forgets it."""
     client, _ = await connect_tv()
     await client.close()
     await hass.async_block_till_done()
-    assert await async_setup_component(hass, "config", {})
 
+    # What HA's config/device_registry/remove_config_entry command does.
     device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, DEVICE_ID)})
-    ws = await hass_ws_client(hass)
-    await ws.send_json_auto_id(
-        {
-            "type": "config/device_registry/remove_config_entry",
-            "config_entry_id": entry.entry_id,
-            "device_id": device.id,
-        }
+    assert await async_remove_config_entry_device(hass, entry, device)
+    dr.async_get(hass).async_update_device(
+        device.id, remove_config_entry_id=entry.entry_id
     )
-    assert (await ws.receive_json())["success"]
     await hass.async_block_till_done()
+
     assert er.async_get(hass).async_get(NOTIFY_ENTITY) is None
     assert entry.runtime_data.devices == {}
