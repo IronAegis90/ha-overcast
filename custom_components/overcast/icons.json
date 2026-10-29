@@ -1,0 +1,7 @@
+{
+  "services": {
+    "send_notification": {
+      "service": "mdi:message-badge"
+    }
+  }
+}
