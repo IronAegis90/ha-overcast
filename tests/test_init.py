@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlparse
+
+import jwt
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -17,6 +20,7 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.util import dt as dt_util
 
 from .conftest import DEVICE_ID, Connect
 
@@ -187,6 +191,27 @@ async def test_short_ttl_not_extended_while_queued(
     assert event["message"] == "long"
     await client.send_json_auto_id({"type": "ping"})
     assert (await client.receive_json())["type"] == "pong"
+
+
+async def test_queued_image_signed_on_delivery(
+    hass: HomeAssistant, entry: MockConfigEntry, connect_tv: Connect, freezer
+) -> None:
+    """A queued camera image gets a fresh signed URL when it is delivered."""
+    await hass.config.async_update(external_url="https://example.ui.nabu.casa")
+    client, _ = await connect_tv()
+    await client.close()
+    await hass.async_block_till_done()
+
+    await send_notification(
+        hass, message="x", image_entity="camera.front_door", ttl=1800
+    )
+    freezer.tick(600)  # longer than the 5 minute signature lifetime
+
+    client, _ = await connect_tv()
+    url = (await client.receive_json())["event"]["icon"]["url"]
+    token = parse_qs(urlparse(url).query)["authSig"][0]
+    claims = jwt.decode(token, options={"verify_signature": False})
+    assert claims["exp"] > dt_util.utcnow().timestamp()
 
 
 async def test_device_bound_to_registering_user(

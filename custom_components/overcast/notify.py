@@ -51,12 +51,13 @@ class OvercastNotifyEntity(OvercastEntity, NotifyEntity):
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
         """Handle notify.send_message."""
-        notification = build_notification(
-            self.hass, {"message": message, "title": title}
+        data = {"message": message, "title": title}
+        self.hub.async_send(
+            self.device_id, lambda: build_notification(self.hass, data), DEFAULT_TTL
         )
-        self.hub.async_send(self.device_id, notification, DEFAULT_TTL)
 
     async def async_send_notification(self, **data: Any) -> None:
         """Handle overcast.send_notification."""
-        notification = build_notification(self.hass, data)
-        self.hub.async_send(self.device_id, notification, data[ATTR_TTL])
+        self.hub.async_send(
+            self.device_id, lambda: build_notification(self.hass, data), data[ATTR_TTL]
+        )

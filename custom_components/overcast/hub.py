@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -30,6 +31,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "Fire TV (Vega OS)"
+
+
+# Returns the notification fields (see PROTOCOL.md); called again on delivery.
+type NotificationBuilder = Callable[[], dict[str, Any]]
 
 
 @dataclass(slots=True)
@@ -66,8 +71,9 @@ class OvercastHub:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
         self._subscribers: dict[str, _Subscriber] = {}
-        # Per TV: (expiry, payload) pairs waiting for it to connect.
-        self._queues: dict[str, deque[tuple[datetime, dict[str, Any]]]] = {}
+        # Per TV: (expiry, nid, build) for notifications waiting for it to connect.
+        # They are rebuilt on delivery so signed image URLs are fresh.
+        self._queues: dict[str, deque[tuple[datetime, str, NotificationBuilder]]] = {}
 
     async def async_load(self) -> None:
         """Load the TVs registered in earlier runs."""
@@ -141,9 +147,15 @@ class OvercastHub:
         if not queue or subscriber is None:
             return
         now = dt_util.utcnow()
-        for expires_at, payload in queue:
-            if expires_at > now:
-                subscriber.send(payload)
+        for expires_at, nid, build in queue:
+            if expires_at <= now:
+                continue
+            try:
+                notification = build()
+            except HomeAssistantError as err:
+                _LOGGER.warning("Dropping queued notification %s: %s", nid, err)
+                continue
+            subscriber.send(_payload(nid, expires_at, notification))
 
     @callback
     def async_forget(self, device_id: str) -> None:
@@ -153,10 +165,15 @@ class OvercastHub:
         self._store.async_delay_save(lambda: self.devices, 1)
 
     @callback
-    def async_send(self, device_id: str, notification: dict[str, Any], ttl: int) -> str:
-        """Send a notification now, or queue it for up to ``ttl`` seconds."""
+    def async_send(self, device_id: str, build: NotificationBuilder, ttl: int) -> str:
+        """Send a notification now, or queue it for up to ``ttl`` seconds.
+
+        ``build`` runs now, so invalid input fails the action, and again on
+        delivery for queued notifications.
+        """
         nid = ulid_now()
         now = dt_util.utcnow()
+        notification = build()
         if subscriber := self._subscribers.get(device_id):
             # Live sends get a floor so clock skew on the TV doesn't drop them.
             subscriber.send(
@@ -171,9 +188,8 @@ class OvercastHub:
                 translation_key="not_connected",
                 translation_placeholders={"name": self.devices[device_id]["name"]},
             )
-        expires_at = now + timedelta(seconds=ttl)
         self._queues.setdefault(device_id, deque(maxlen=QUEUE_SIZE)).append(
-            (expires_at, _payload(nid, expires_at, notification))
+            (now + timedelta(seconds=ttl), nid, build)
         )
         _LOGGER.debug("Queued %s for %s (TV not connected)", nid, device_id)
         return nid

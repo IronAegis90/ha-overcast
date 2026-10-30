@@ -11,7 +11,7 @@ It needs the [Overcast TV app](https://github.com/IronAegis90/overcast-tv) on ea
 1. In HACS, open **Custom repositories**, add `https://github.com/IronAegis90/ha-overcast` as an **Integration**, and install **Overcast**.
 2. Restart Home Assistant.
 3. Go to **Settings → Devices & services → Add integration → Overcast** and confirm.
-4. Create a long-lived access token for the TVs. A dedicated non-admin user is safest: create a user named "Overcast", log in as that user, then go to **Profile → Security → Long-lived access tokens**.
+4. Create a long-lived access token for each TV. The safest setup is a dedicated **non-admin user per TV** (for example "Overcast Living Room"): log in as that user, then go to **Profile → Security → Long-lived access tokens**. Each TV is bound to the user that first registered it. TVs that share a user can take over each other's notifications, so if one TV's token leaks, a separate user per TV keeps the others safe.
 5. On each TV, open the Overcast app and enter your Home Assistant URL, the token and a name for the TV.
 
 Each TV appears as a device as soon as it connects. You don't need to add TVs one by one.
