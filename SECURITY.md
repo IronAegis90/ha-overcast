@@ -1,0 +1,24 @@
+# Security policy
+
+## Reporting a vulnerability
+
+Please report vulnerabilities privately, not in a public issue:
+**[Report a vulnerability](https://github.com/IronAegis90/ha-overcast/security/advisories/new)** (GitHub private vulnerability reporting).
+
+Include what you found, how to reproduce it, and the Home Assistant and Overcast versions. You should get a reply within a week. Please give a fix time to ship before you disclose publicly.
+
+## Scope
+
+In scope: the `overcast` integration in this repository. That covers its WebSocket commands (`overcast/register`, `overcast/ack`), the `overcast.send_notification` action, and the signed camera/image URLs it creates.
+
+Out of scope: Home Assistant itself, HACS, and the Vega OS toast renderer. Report those to their projects. Vulnerabilities in the TV app go to [overcast-tv](https://github.com/IronAegis90/overcast-tv/security/advisories/new).
+
+## Supported versions
+
+Only the latest release gets security fixes.
+
+## Keeping your setup safe
+
+- Give each TV a token from a dedicated **non-admin** Home Assistant user. Overcast's commands don't need admin rights.
+- If a TV is lost or sold, delete its token under that user's **Profile → Security**, and delete the TV's device in Home Assistant.
+- Never paste a long-lived access token into an issue, log or screenshot.

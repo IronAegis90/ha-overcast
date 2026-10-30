@@ -88,7 +88,7 @@ The TV app holds a WebSocket connection to Home Assistant's API, registers with 
 
 ```bash
 python3.13 -m venv .venv && . .venv/bin/activate
-pip install -r requirements_test.txt ruff
+pip install -r requirements_test.txt
 pytest
 ruff check custom_components tests && ruff format --check custom_components tests
 ```
