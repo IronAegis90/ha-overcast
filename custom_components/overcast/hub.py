@@ -44,6 +44,17 @@ class _Subscriber:
         self.connection.send_message(websocket_api.event_message(self.msg_id, payload))
 
 
+def _payload(
+    nid: str, expires_at: datetime, notification: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "kind": "notification",
+        "nid": nid,
+        "expires_at": expires_at.isoformat(),
+        **notification,
+    }
+
+
 class OvercastHub:
     """Registry of TVs, their live connections and their pending notifications."""
 
@@ -72,6 +83,10 @@ class OvercastHub:
             subscriber.send({"kind": "reconnect"})
             subscriber.connection.subscriptions.pop(subscriber.msg_id, None)
             del self._subscribers[device_id]
+
+    def owner(self, device_id: str) -> str | None:
+        """Return the id of the HA user the TV registered with, if known."""
+        return self.devices.get(device_id, {}).get("user_id")
 
     def is_connected(self, device_id: str) -> bool:
         """Return whether the TV currently holds a connection."""
@@ -141,15 +156,14 @@ class OvercastHub:
     def async_send(self, device_id: str, notification: dict[str, Any], ttl: int) -> str:
         """Send a notification now, or queue it for up to ``ttl`` seconds."""
         nid = ulid_now()
-        expires_at = dt_util.utcnow() + max(timedelta(seconds=ttl), MIN_EXPIRY)
-        payload = {
-            "kind": "notification",
-            "nid": nid,
-            "expires_at": expires_at.isoformat(),
-            **notification,
-        }
+        now = dt_util.utcnow()
         if subscriber := self._subscribers.get(device_id):
-            subscriber.send(payload)
+            # Live sends get a floor so clock skew on the TV doesn't drop them.
+            subscriber.send(
+                _payload(
+                    nid, now + max(timedelta(seconds=ttl), MIN_EXPIRY), notification
+                )
+            )
             return nid
         if ttl <= 0:
             raise HomeAssistantError(
@@ -157,8 +171,9 @@ class OvercastHub:
                 translation_key="not_connected",
                 translation_placeholders={"name": self.devices[device_id]["name"]},
             )
+        expires_at = now + timedelta(seconds=ttl)
         self._queues.setdefault(device_id, deque(maxlen=QUEUE_SIZE)).append(
-            (expires_at, payload)
+            (expires_at, _payload(nid, expires_at, notification))
         )
         _LOGGER.debug("Queued %s for %s (TV not connected)", nid, device_id)
         return nid

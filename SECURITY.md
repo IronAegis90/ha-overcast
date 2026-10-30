@@ -20,5 +20,5 @@ Only the latest release gets security fixes.
 ## Keeping your setup safe
 
 - Give each TV a token from a dedicated **non-admin** Home Assistant user. Overcast's commands don't need admin rights.
-- If a TV is lost or sold, delete its token under that user's **Profile → Security**, and delete the TV's device in Home Assistant.
+- If a TV is lost or sold, or a token may have leaked, **deactivate that user** (Settings → People → Users) and revoke **all** of its tokens, not just the TV's. Anyone holding a token can create more long-lived tokens for the same user. Then delete the TV's device in Home Assistant. Give the remaining TVs a new user, and new tokens.
 - Never paste a long-lived access token into an issue, log or screenshot.

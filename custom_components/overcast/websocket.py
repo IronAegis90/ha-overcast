@@ -59,7 +59,20 @@ def ws_register(
         return
 
     device_id = msg["device_id"]
+    # Device ids are visible to every signed-in user (device registry), so a TV
+    # stays bound to the user it first registered with; otherwise any user could
+    # take over its subscription and read its notifications.
+    owner = hub.owner(device_id)
+    if owner is not None and owner != connection.user.id:
+        connection.send_error(
+            msg["id"],
+            websocket_api.ERR_UNAUTHORIZED,
+            "This TV is registered to another Home Assistant user. Delete its "
+            "device in Home Assistant to register it with this user.",
+        )
+        return
     info = {
+        "user_id": connection.user.id,
         "name": msg["name"],
         "model": msg.get("model"),
         "app_version": msg.get("app_version"),

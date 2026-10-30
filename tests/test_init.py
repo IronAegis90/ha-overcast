@@ -170,6 +170,55 @@ async def test_queue_while_disconnected(
     ]
 
 
+async def test_short_ttl_not_extended_while_queued(
+    hass: HomeAssistant, entry: MockConfigEntry, connect_tv: Connect, freezer
+) -> None:
+    """A queued notification expires after its own ttl, not the 30 s live floor."""
+    client, _ = await connect_tv()
+    await client.close()
+    await hass.async_block_till_done()
+
+    await send_notification(hass, message="short", ttl=5)
+    await send_notification(hass, message="long", ttl=60)
+    freezer.tick(10)
+
+    client, _ = await connect_tv()
+    event = (await client.receive_json())["event"]
+    assert event["message"] == "long"
+    await client.send_json_auto_id({"type": "ping"})
+    assert (await client.receive_json())["type"] == "pong"
+
+
+async def test_device_bound_to_registering_user(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    connect_tv: Connect,
+    hass_ws_client,
+    hass_read_only_access_token: str,
+) -> None:
+    """Another user cannot take over a TV by registering with its device_id."""
+    tv, sub_id = await connect_tv()
+
+    other = await hass_ws_client(hass, hass_read_only_access_token)
+    await other.send_json_auto_id(
+        {
+            "type": "overcast/register",
+            "protocol": 1,
+            "device_id": DEVICE_ID,
+            "name": "Hijack",
+        }
+    )
+    msg = await other.receive_json()
+    assert not msg["success"]
+    assert msg["error"]["code"] == "unauthorized"
+
+    # The TV keeps its subscription.
+    await send_message(hass, "still mine")
+    msg = await tv.receive_json()
+    assert msg["id"] == sub_id
+    assert msg["event"]["message"] == "still mine"
+
+
 async def test_protocol_mismatch(
     hass: HomeAssistant, entry: MockConfigEntry, hass_ws_client
 ) -> None:
