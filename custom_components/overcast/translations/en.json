@@ -1,0 +1,71 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Overcast",
+        "description": "Overcast adds a notify entity for each Fire TV running the Overcast app. After setup, create a long-lived access token (ideally for a dedicated non-admin user) and enter it with your Home Assistant URL in the app on each TV. TVs appear here automatically when they connect."
+      }
+    }
+  },
+  "exceptions": {
+    "not_connected": {
+      "message": "{name} is not connected, and the notification has a ttl of 0, so it was not queued."
+    },
+    "no_https_url": {
+      "message": "Camera and image snapshots need an https URL for Home Assistant (for example Home Assistant Cloud or an external URL with TLS). Set one under Settings > System > Network, or use image_url instead."
+    }
+  },
+  "selector": {
+    "icon_size": {
+      "options": {
+        "small": "Small",
+        "normal": "Normal",
+        "large": "Large"
+      }
+    }
+  },
+  "services": {
+    "send_notification": {
+      "name": "Send notification",
+      "description": "Shows a toast on one or more Overcast TVs, with optional image, duration and an action that opens an app.",
+      "fields": {
+        "message": {
+          "name": "Message",
+          "description": "Body of the toast."
+        },
+        "title": {
+          "name": "Title",
+          "description": "First line of the toast. Defaults to \"Home Assistant\"."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long the toast stays on screen."
+        },
+        "image_url": {
+          "name": "Image URL",
+          "description": "https URL of an image to show as the toast icon. It must be reachable from the TV without authentication."
+        },
+        "image_entity": {
+          "name": "Image entity",
+          "description": "Camera or image entity to show as the toast icon. Sent as a short-lived signed URL, which needs an https URL for Home Assistant."
+        },
+        "icon_size": {
+          "name": "Icon size",
+          "description": "Size of the toast icon."
+        },
+        "launch_uri": {
+          "name": "Launch URI",
+          "description": "App to open from the toast's action, for example pkg://com.example.app.main."
+        },
+        "launch_title": {
+          "name": "Launch title",
+          "description": "Label of the toast's action."
+        },
+        "ttl": {
+          "name": "Time to live",
+          "description": "If the TV is not connected, how long to keep the notification for it. 0 fails the action instead."
+        }
+      }
+    }
+  }
+}

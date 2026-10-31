@@ -1,0 +1,15 @@
+{
+  "domain": "overcast",
+  "name": "Overcast",
+  "after_dependencies": ["camera", "image"],
+  "codeowners": ["@IronAegis90"],
+  "config_flow": true,
+  "dependencies": ["http", "websocket_api"],
+  "documentation": "https://github.com/IronAegis90/ha-overcast",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/IronAegis90/ha-overcast/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

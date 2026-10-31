@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Newer pytest-homeassistant-custom-component releases can require a newer
+    # Python than CI uses; if one fails CI, bump python-version in validate.yml.
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

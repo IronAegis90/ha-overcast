@@ -1,0 +1,58 @@
+send_notification:
+  target:
+    entity:
+      integration: overcast
+      domain: notify
+  fields:
+    message:
+      required: true
+      example: "Someone is at the front door"
+      selector:
+        text:
+          multiline: true
+    title:
+      example: "Front door"
+      selector:
+        text:
+    duration:
+      default: 8
+      selector:
+        number:
+          min: 1
+          max: 300
+          unit_of_measurement: seconds
+    image_url:
+      example: "https://example.com/doorbell.png"
+      selector:
+        text:
+          type: url
+    image_entity:
+      selector:
+        entity:
+          domain:
+            - camera
+            - image
+    icon_size:
+      default: normal
+      selector:
+        select:
+          translation_key: icon_size
+          options:
+            - small
+            - normal
+            - large
+    launch_uri:
+      example: "pkg://com.example.app.main"
+      selector:
+        text:
+    launch_title:
+      default: "Open"
+      selector:
+        text:
+    ttl:
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
